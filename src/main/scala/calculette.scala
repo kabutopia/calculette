@@ -1,24 +1,39 @@
 package calculette
 
-/**
- * sealed garanti que Tree ne pourra pas être étendu
- * c'est ainsi un Algebraic Data Type
- */
-sealed trait Tree
-final case class Node(op: Operator, left: Tree, right: Tree) extends Tree
-final case class Leaf(value: Int) extends Tree
 
-trait Operator
-case object + extends Operator
-case object - extends Operator
-//case object * extends Operator
-//case object / extends Operator
+object Calc {
 
-sealed trait Token
-final case class OpToken(op: String) extends Token
-final case class DigitToken(digits: String) extends Token
+    trait Operator {
+        def eval(l: Int)(r: Int) : Int
+    }
 
-object Calculette {
+    case object + extends Operator {
+        def eval(l: Int)(r: Int) : Int = l+r
+    }
+
+    case object - extends Operator {
+        def eval(l: Int)(r: Int) : Int = l-r
+    }
+    //case object * extends Operator
+    //case object / extends Operator
+
+    /**
+     * sealed garanti que Tree ne pourra pas être étendu
+     * c'est ainsi un Algebraic Data Type
+     */
+    sealed trait Tree
+    final case class Node(op: Operator, left: Tree, right: Tree) extends Tree
+    final case class Leaf(value: Int) extends Tree
+
+    def evaluate(tree: Tree) : Int = tree match {
+        case Leaf(v) => v
+        case Node(o,l,r) => o.eval( evaluate(l) )( evaluate(r) )
+    }
+
+    sealed trait Token
+    final case class OpToken(op: String) extends Token
+    final case class DigitToken(digits: String) extends Token
+
     type Error = String
     type ParseResult = Either[Error, Tree]
     type TokenResult = Either[Error, List[Token]]
@@ -49,9 +64,9 @@ object Calculette {
     def makeTree(tks: List[Token]): ParseResult = {
         tks match {
             case DigitToken(d) :: OpToken(o) :: tail => 
-                makeTree(tail).map( subtree => Node(makeOp(o), Leaf(d.toInt), subtree))
+                makeTree(tail).map( subtree => Node(makeOp(o), Leaf(d.toInt), subtree) )
             case DigitToken(d) :: Nil => Right(Leaf(d.toInt))
-            case _ => Left(s"""Error""")
+            case _ => Left(s"""Error, Bad syntax""")
         }
     }   
 
@@ -63,12 +78,9 @@ object Calculette {
             tree   <- makeTree(tokens)
         } yield tree
         
-
-    def evaluate(tree: Tree) : Int = ???
-
-    def apply(str: String) : Int =
+    def apply(str: String) : Either[Error,Int] = 
         for {
             tree <- parser(str)
-        } yield evaluate(tree)
+        } yield evaluate(tree) 
 }
 
